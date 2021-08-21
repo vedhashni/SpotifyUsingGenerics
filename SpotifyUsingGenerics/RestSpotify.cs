@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using RestSharp;
+using Newtonsoft.Json;
+
 
 
 namespace SpotifyUsingGenerics
@@ -10,48 +12,44 @@ namespace SpotifyUsingGenerics
     public class RestSpotify
     {
         public string token = "";
-        public string userID = "";
-
-        public string playlistName = "";
-        public string playlistID = "";
-
-        public string updatedplaylistName = "";
-
+        public static string userID = "";
+        public static string playlistID = "";
+        static string uri = "spotify:track:7mtYsNBYTDPa8Mscf166hg";
+        private static IRestClient restClient = new RestClient();
         private static IRestResponse restResponse { get; set; }
 
         [TestInitialize]
 
         public void setup()
         {
-            token = "Bearer BQDYU2EwS1ULCWXZ83Rg41jQ68G69X1s6_kedH4tdnr8zZQjkcjxPg8Sqvqhi9xvje-DJxy7SO8khUJLM0h_tIwmCg0jKIJopDLtMteT1DpKy2_ns-Eln-FtEKk00nqc48iQiZDo_-Z6O35fItgt2imd967Gut7PQIJXQzm9wENaQvopZ6dYo5cTFJaxTrVnSWic0lMMQBfQOtoSn7RGuSpJmZC4a5k6dT6xFFHcZD9LKCla0F_HyLD8Op1b-Nlvse2kDqdq3aVeIrRYr0FQ9lh_mljYXFKp3EiKJqU5";
+            token = "Bearer BQDqx83kPb_yZPy56QbRFZ_yaDjurzjbxyPwjBSFsk0Mg82VXMpio9lPk0Ml2ugVw2rAQRTY2ygQswVrtSEup2ANwnp9J222XV5Jdv5Ws9Pq--U4zhPPyDgSYkrXsGDuQmmLIuJSLNAboVtOjKFyEIC3D4muhK8MmvEzSPyb2ERcyl-PIx5piFh5TqccuJ_uiOpTqH9VxZFLIIZ1E2v0vKgskp_uk-S-oMD2UveDAQxyM1684bWS-1jM-P-P_BI0ZJiHZrPBb85HaZI9vgbCFATBFnXesOAaD_gm1qum";
         }
 
+        
+        [Priority(1)]
+        
         [TestMethod]
 
-        public void get_CurrentUser()
+        public void CurrentUser()
         {
             
-            IRestClient restClient = new RestClient();
             IRestRequest restRequest = new RestRequest("https://api.spotify.com/v1/me");
             //to check statuscode and content 
             restRequest.AddHeader("Authorization", "token" + token);
             IRestResponse restResponse = restClient.Get(restRequest);
-
-            IRestResponse<List<JsonObjects>> restResponse1 = restClient.Get<List<JsonObjects>>(restRequest);
-            var dataobjects = restResponse1.Data;
-            foreach (var d in dataobjects)
-            {
-                userID = d.id;
-            }
+            var obj = JsonConvert.DeserializeObject<dynamic>(restResponse.Content);
+            userID = obj.id;
             Console.WriteLine(userID);
-
+            Console.WriteLine(restResponse.Content);
         }
+
+        [Priority(2)]
 
         [TestMethod]
 
-        public void CreatePlaylist()
+        public void PlaylistCreated()
         {
-            get_CurrentUser();
+            //get_CurrentUser();
             
 
             string JsonData = "{" +
@@ -59,32 +57,24 @@ namespace SpotifyUsingGenerics
                                     "\"description\": \"New playlist created\"," +
                                     "\"public\" : \"false\""+
                                     "}";
-            IRestClient restClient = new RestClient();
-            IRestRequest restRequest = new RestRequest("https://api.spotify.com/v1/users/"+userID+"/playlists");
-
+            
+            IRestRequest restRequest = new RestRequest("https://api.spotify.com/v1/users/"+ userID +"/playlists");
             restRequest.AddHeader("Authorization", "token" + token);
-
-            //restRequest.AddHeader("content-Type", "application/json");
             restRequest.AddJsonBody(JsonData);
             restRequest.AddHeader("content-Type", "application/json");
-            //Assert.AreEqual(201, 202, (int)restResponse.StatusCode);
-            IRestResponse<List<JsonObjects>> restResponse2 = restClient.Post<List<JsonObjects>>(restRequest);
-            Console.WriteLine((int)restResponse2.StatusCode);
-            var dataobjects1 = restResponse2.Data;
-            foreach (var d in dataobjects1)
-            {
-                playlistName = d.name;
-                playlistID = d.id;
-
-            }
+            restResponse = restClient.Post(restRequest);
+            var obj1 = JsonConvert.DeserializeObject<dynamic>(restResponse.Content);
+            playlistID= obj1.id;
             Console.WriteLine(playlistID);
-            Console.WriteLine(playlistName);
+            Console.WriteLine(restResponse.Content);
         }
 
+        [Priority(3)]
+
         [TestMethod]
-        public void ChangePlaylistDescription()
+        public void PlaylistDescriptionChanging()
         {
-            CreatePlaylist();
+            //CreatePlaylist();
 
             string json = "{" +
                             "\"name\": \"Updated Music Zone song's list\"," +
@@ -93,22 +83,48 @@ namespace SpotifyUsingGenerics
                             "}";
 
         
-
-        
-            IRestClient restClient = new RestClient();
-            IRestRequest restRequest = new RestRequest("https://api.spotify.com/v1/playlists/"+playlistID+"/");
-
+            IRestRequest restRequest = new RestRequest("https://api.spotify.com/v1/playlists/" +playlistID+ "/");
             restRequest.AddHeader("Authorization", "token" + token);
-
             restRequest.AddJsonBody(json);
-            
             restRequest.AddHeader("content-Type", "application/json");
-
             restResponse = restClient.Put(restRequest);
             Console.WriteLine((int)restResponse.StatusCode);
+        }
+
+        [Priority(4)]
+
+        [TestMethod]
+
+        public void TrackAdded()
+        {
+            //CreatePlaylist();
+
             
+            IRestRequest restRequest = new RestRequest("https://api.spotify.com/v1/playlists/" + playlistID + "/tracks?uris=" + uri);
+            restRequest.AddHeader("Authorization", "token" + token);
+            restRequest.AddParameter("uris", uri);
+            restResponse = restClient.Post(restRequest);
+            Console.WriteLine((int)restResponse.StatusCode);
+            Console.WriteLine(restResponse.Content);
+
+
+        }
+
+        [Priority(5)]
+
+        [TestMethod]
+
+        public void TrackDeletion()
+        {
+            string json = "{ \"tracks\":" +
+                         "[{ \"uri\": \"spotify:track:7mtYsNBYTDPa8Mscf166hg\"}]}";
+
             
-            
+            IRestRequest restRequest = new RestRequest("https://api.spotify.com/v1/playlists/" + playlistID + "/tracks");
+            restRequest.AddHeader("Authorization", "token" + token);
+            restRequest.AddJsonBody(json);
+            restResponse = restClient.Delete(restRequest);
+            Console.WriteLine((int)restResponse.StatusCode);
         }
     }
 }
